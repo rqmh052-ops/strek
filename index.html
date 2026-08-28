@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>أتمتة الستريك - Vodafone Streak Manager</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Cairo) -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        vfRed: '#E60000',
+                        vfDarkRed: '#800000',
+                        vfCrimson: '#4a0000',
+                        vfDarkBg: '#0a0a0a',
+                        vfCard: '#121212',
+                        vfBorder: '#262626'
+                    },
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        html, body {
+            touch-action: none;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            font-family: 'Cairo', sans-serif;
+            user-select: none;
+            background: #050505;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #121212;
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e60000;
+            border-radius: 8px;
+        }
+
+        @keyframes softRedGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(230, 0, 0, 0.25); border-color: rgba(230, 0, 0, 0.4); }
+            50% { box-shadow: 0 0 25px rgba(230, 0, 0, 0.45); border-color: rgba(230, 0, 0, 0.7); }
+        }
+
+        .animated-border {
+            animation: softRedGlow 3.5s infinite ease-in-out;
+        }
+
+        .glass-box {
+            background: rgba(14, 14, 14, 0.94);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen text-gray-200 relative">
+
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute -top-40 -left-40 w-96 h-96 bg-vfCrimson opacity-20 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-vfDarkRed opacity-15 rounded-full blur-3xl"></div>
+    </div>
+
+    <main class="relative w-[92vw] max-w-[440px] h-[90vh] max-h-[720px] glass-box rounded-3xl border border-vfRed/40 animated-border flex flex-col justify-between overflow-hidden p-5 z-10">
+        
+        <!-- رأس التطبيق مع اسم المطور العريض المطلوبة -->
+        <header class="flex flex-col border-b border-vfBorder pb-2.5 space-y-1.5">
+            <div class="text-center bg-black/60 border border-vfBorder py-1 rounded-xl">
+                <span class="text-[11px] font-extrabold text-gray-300">
+                    المطور: <span class="text-vfRed text-xs tracking-wider">أيمن | AYMAN</span>
+                </span>
+            </div>
+
+            <div class="flex items-center justify-between pt-0.5">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-vfRed to-vfDarkRed flex items-center justify-center text-white font-bold text-sm shadow-md">
+                        <i class="fa-solid fa-fire text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-extrabold text-sm leading-tight text-white">أتمتة ستريك فودافون</h1>
+                        <p class="text-[9px] text-gray-400">سيرفر التشغيل الحقيقي v2.6</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5 bg-vfRed/10 border border-vfRed/30 px-2 py-0.5 rounded-full">
+                    <span class="w-1.5 h-1.5 rounded-full bg-vfRed animate-ping"></span>
+                    <span class="text-[9px] font-bold text-red-400">سيرفر متصل</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- محتوى الشاشات -->
+        <div id="contentArea" class="flex-1 my-2.5 overflow-hidden relative">
+            
+            <!-- 1. شاشة إضافة ثنائية ستريك جديدة -->
+            <section id="addStreakScreen" class="h-full flex flex-col justify-between overflow-y-auto custom-scrollbar pr-1">
+                <div class="space-y-2.5">
+                    <div class="text-center pt-1">
+                        <h2 class="text-xs font-bold text-white">إضافة ثنائية جديدة</h2>
+                        <p class="text-[10px] text-gray-400">أدخل رقمين لتشغيل وإعادة الستريك بينهما تلقائياً</p>
+                    </div>
+
+                    <!-- الحساب الأول -->
+                    <div class="bg-vfCard border border-vfBorder rounded-xl p-2.5 space-y-1.5">
+                        <div class="flex items-center justify-between text-xs font-bold text-red-500">
+                            <span><i class="fa-solid fa-phone-flip ml-1"></i> الرقم الأول</span>
+                            <span class="text-[9px] bg-red-950 text-red-400 px-2 py-0.5 rounded border border-red-900/50">#1</span>
+                        </div>
+                        <input type="tel" id="num1" placeholder="رقم الموبايل الأول (010...)" class="w-full bg-black/60 border border-vfBorder rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-vfRed transition text-white placeholder-gray-600">
+                        <input type="password" id="pass1" placeholder="كلمة المرور" class="w-full bg-black/60 border border-vfBorder rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-vfRed transition text-white placeholder-gray-600">
+                    </div>
+
+                    <!-- الحساب الثاني -->
+                    <div class="bg-vfCard border border-vfBorder rounded-xl p-2.5 space-y-1.5">
+                        <div class="flex items-center justify-between text-xs font-bold text-red-500">
+                            <span><i class="fa-solid fa-phone-flip ml-1"></i> الرقم الثاني</span>
+                            <span class="text-[9px] bg-red-950 text-red-400 px-2 py-0.5 rounded border border-red-900/50">#2</span>
+                        </div>
+                        <input type="tel" id="num2" placeholder="رقم الموبايل الثاني (010...)" class="w-full bg-black/60 border border-vfBorder rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-vfRed transition text-white placeholder-gray-600">
+                        <input type="password" id="pass2" placeholder="كلمة المرور" class="w-full bg-black/60 border border-vfBorder rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-vfRed transition text-white placeholder-gray-600">
+                    </div>
+
+                    <!-- التكرار التلقائي -->
+                    <div class="bg-vfCard border border-vfBorder rounded-xl p-2.5 space-y-1.5">
+                        <div class="flex items-center justify-between text-xs font-bold">
+                            <span class="text-gray-300"><i class="fa-regular fa-clock ml-1 text-red-500"></i> وقت التكرار التلقائي:</span>
+                            <span id="intervalValue" class="text-vfRed font-extrabold text-xs">10 ساعات</span>
+                        </div>
+                        <input type="range" id="intervalRange" min="1" max="23" value="10" class="w-full accent-vfRed cursor-pointer bg-black/80 h-1.5 rounded-lg">
+                        <div class="flex justify-between text-[9px] text-gray-500 font-mono">
+                            <span>1 ساعة</span>
+                            <span>10 ساعات (الافتراضي)</span>
+                            <span>23 ساعة</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="startRealStreakProcess()" class="w-full mt-2 bg-vfRed hover:bg-red-700 text-white font-bold py-2 px-4 rounded-xl active:scale-[0.98] transition flex items-center justify-center gap-2 text-xs shadow-md shadow-vfRed/20">
+                    <i class="fa-solid fa-play text-xs"></i>
+                    تفعيل وتشغيل الستريك الحقيقي
+                </button>
+            </section>
+
+            <!-- 2. لوحة تنفيذ العمليات المحاكية والمباشرة -->
+            <section id="executionScreen" class="h-full hidden flex-col justify-between overflow-hidden">
+                <div class="text-center py-2">
+                    <div class="inline-block relative mb-1.5">
+                        <div class="w-10 h-10 border-2 border-vfBorder border-t-vfRed rounded-full animate-spin flex items-center justify-center mx-auto"></div>
+                        <i class="fa-solid fa-bolt text-vfRed text-xs absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></i>
+                    </div>
+                    <h3 class="font-bold text-xs text-white">جاري الاتصال بالسيرفر والتنفيذ...</h3>
+                    <p class="text-[9px] text-gray-400">يتم نقل الـ POKEs والـ EMOJIs فعلياً</p>
+                </div>
+
+                <div id="logsStepContainer" class="flex-1 bg-black/90 border border-vfBorder rounded-xl p-2.5 my-2 overflow-y-auto custom-scrollbar font-mono text-[9px] space-y-1">
+                </div>
+
+                <div class="w-full bg-vfCard rounded-full h-1 overflow-hidden">
+                    <div id="progressBar" class="bg-vfRed h-full w-1/3 animate-pulse"></div>
+                </div>
+            </section>
+
+            <!-- 3. الشاشة الرئيسية للستريكات المفعلة -->
+            <section id="mainDashboardScreen" class="h-full hidden flex-col justify-between overflow-y-auto custom-scrollbar pr-1">
+                <div class="space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-bold text-gray-300">قائمة الستريكات المفعلة</h3>
+                        <span class="text-[9px] text-gray-500" id="totalCountText">العدد: 0</span>
+                    </div>
+
+                    <div id="streaksContainer" class="space-y-2.5">
+                    </div>
+                </div>
+
+                <button onclick="showAddScreen()" class="w-full mt-2 bg-vfCard hover:bg-vfBorder border border-vfBorder text-white font-bold py-2 px-4 rounded-xl active:scale-[0.98] transition flex items-center justify-center gap-2 text-xs">
+                    <i class="fa-solid fa-plus text-vfRed"></i>
+                    إضافة رقمين آخرين
+                </button>
+            </section>
+
+        </div>
+
+        <footer class="border-t border-vfBorder pt-2 text-center flex items-center justify-between text-[9px] text-gray-500">
+            <span>حقوق الأتمتة محفوظة لـ AYMAN</span>
+            <span class="flex items-center gap-1 text-gray-400"><i class="fa-solid fa-shield-halved text-vfRed"></i> سيرفر كود موثوق</span>
+        </footer>
+
+    </main>
+
+    <!-- إشعار Toast للنسخ -->
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-vfCard border border-vfRed text-white text-xs px-4 py-2 rounded-xl shadow-lg opacity-0 pointer-events-none transition-all duration-300 z-50 flex items-center gap-2">
+        <i class="fa-solid fa-circle-check text-vfRed"></i>
+        <span id="toastMsg">تم نسخ سجل الأخطاء بنجاح!</span>
+    </div>
+
+    <script>
+        let cachedStreaks = [];
+
+        const intervalRange = document.getElementById('intervalRange');
+        const intervalValue = document.getElementById('intervalValue');
+        intervalRange.addEventListener('input', (e) => {
+            intervalValue.innerText = `${e.target.value} ساعات`;
+        });
+
+        async function startRealStreakProcess() {
+            const num1 = document.getElementById('num1').value.trim();
+            const pass1 = document.getElementById('pass1').value.trim();
+            const num2 = document.getElementById('num2').value.trim();
+            const pass2 = document.getElementById('pass2').value.trim();
+            const hours = parseInt(intervalRange.value);
+
+            if (!num1 || !pass1 || !num2 || !pass2) {
+                alert('رجاءً أدخل رقم الموبايل وكلمة المرور لكل الحسابات!');
+                return;
+            }
+
+            showScreen('executionScreen');
+            document.getElementById('logsStepContainer').innerHTML = '<div class="text-gray-400">⏳ إرسال البيانات للأنظمة السحابية والبدء...</div>';
+
+            try {
+                const response = await fetch('/api/run_streak', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ num1, pass1, num2, pass2, hours })
+                });
+
+                const result = await response.json();
+                const container = document.getElementById('logsStepContainer');
+                container.innerHTML = '';
+
+                if (result.logs && result.logs.length) {
+                    result.logs.forEach(log => {
+                        const item = document.createElement('div');
+                        item.className = log.includes('❌') ? 'text-red-500' : (log.includes('✅') ? 'text-green-400' : 'text-gray-300');
+                        item.innerText = log;
+                        container.appendChild(item);
+                    });
+                }
+
+                if (result.success) {
+                    setTimeout(() => {
+                        fetchAndRenderStreaks();
+                        showScreen('mainDashboardScreen');
+                    }, 1200);
+                } else {
+                    const errItem = document.createElement('div');
+                    errItem.className = 'text-red-500 font-bold mt-2';
+                    errItem.innerText = `⚠️ خطأ: ${result.error || 'فشلت العملية'}`;
+                    container.appendChild(errItem);
+                }
+            } catch (err) {
+                alert('حدث خطأ أثناء التواصل مع السيرفر: ' + err.message);
+                showScreen('addStreakScreen');
+            }
+        }
+
+        async function fetchAndRenderStreaks() {
+            try {
+                const res = await fetch('/api/streaks');
+                cachedStreaks = await res.json();
+                renderStreaksList(cachedStreaks);
+            } catch (err) {
+                console.error("فشل جلب الستريكات:", err);
+            }
+        }
+
+        function renderStreaksList(streaks) {
+            const container = document.getElementById('streaksContainer');
+            document.getElementById('totalCountText').innerText = `العدد: ${streaks.length}`;
+            container.innerHTML = '';
+
+            streaks.forEach((streak) => {
+                const card = document.createElement('div');
+                card.className = "bg-vfCard border border-vfBorder rounded-xl overflow-hidden transition-all duration-200 hover:border-vfRed/40";
+                
+                card.innerHTML = `
+                    <div class="p-2.5 bg-gradient-to-b from-black/60 to-transparent flex flex-col items-center justify-center relative cursor-pointer" onclick="toggleDetails(${streak.id})">
+                        <div class="absolute top-2 left-2 text-[9px] text-red-400 bg-red-950/60 px-2 py-0.5 rounded border border-red-900/40">
+                            <i class="fa-solid fa-circle text-[6px] ml-1 text-vfRed animate-pulse"></i> شغال تلقائياً
+                        </div>
+
+                        <div class="text-center my-1">
+                            <div class="text-xs font-bold text-white tracking-wider font-mono">${streak.num1}</div>
+                            <div class="text-vfRed text-[10px] my-0.5 font-extrabold flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-arrows-up-down text-[9px]"></i> ستريك حقيقي
+                            </div>
+                            <div class="text-xs font-bold text-white tracking-wider font-mono">${streak.num2}</div>
+                        </div>
+
+                        <div class="text-[9px] text-gray-500 mt-0.5 flex items-center gap-1">
+                            <span>عرض سجل السيرفر والأخطاء</span>
+                            <i class="fa-solid fa-chevron-down text-[8px] transition-transform duration-300" id="icon-${streak.id}"></i>
+                        </div>
+                    </div>
+
+                    <div id="details-${streak.id}" class="hidden border-t border-vfBorder bg-black/70 p-2.5 space-y-2">
+                        <div class="grid grid-cols-2 gap-2 text-center">
+                            <div class="bg-vfCard p-1.5 rounded-lg border border-vfBorder">
+                                <span class="block text-[9px] text-gray-500">التكرار القادم</span>
+                                <span class="font-bold text-white text-[10px]">كل ${streak.hours} ساعات</span>
+                            </div>
+                            <div class="bg-vfCard p-1.5 rounded-lg border border-vfBorder">
+                                <span class="block text-[9px] text-gray-500">المرّات الناجحة</span>
+                                <span class="font-bold text-red-500 text-[10px]">${streak.success_count} مرات</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex items-center justify-between text-[9px] font-bold text-gray-400 mb-1">
+                                <span><i class="fa-solid fa-code text-vfRed ml-1"></i> اللوجات والأخطاء السحابية:</span>
+                                <button onclick="copyStreakLogs(${streak.id})" class="text-[9px] text-gray-300 bg-vfBorder hover:bg-vfRed hover:text-white px-2 py-0.5 rounded transition flex items-center gap-1">
+                                    <i class="fa-solid fa-copy text-[8px]"></i> نسخ السجل
+                                </button>
+                            </div>
+                            <div id="logContent-${streak.id}" class="bg-black/90 rounded-lg p-2 font-mono text-[9px] space-y-1 max-h-28 overflow-y-auto custom-scrollbar border border-vfBorder text-gray-300 dir-ltr text-right">
+                                ${streak.logs.map(log => `<div>${log}</div>`).join('')}
+                            </div>
+                        </div>
+
+                        <button onclick="triggerManualRun('${streak.num1}', '${streak.num2}')" class="w-full bg-vfRed/15 hover:bg-vfRed/30 text-red-400 border border-vfRed/30 text-[9px] font-bold py-1.5 rounded-lg transition flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-rotate-right text-[9px]"></i> إرسال مانيوال الآن (بدون تكرار الكارت)
+                        </button>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        function copyStreakLogs(id) {
+            const streak = cachedStreaks.find(s => s.id === id);
+            if (!streak) return;
+
+            const fullLogText = streak.logs.join('\n');
+            navigator.clipboard.writeText(fullLogText).then(() => {
+                showToast("تم نسخ سجل الأخطاء والعمليات بنجاح!");
+            });
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = message;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+
+        function triggerManualRun(num1, num2) {
+            document.getElementById('num1').value = num1;
+            document.getElementById('num2').value = num2;
+            showScreen('addStreakScreen');
+        }
+
+        function toggleDetails(id) {
+            const details = document.getElementById(`details-${id}`);
+            const icon = document.getElementById(`icon-${id}`);
+            if (details.classList.contains('hidden')) {
+                details.classList.remove('hidden');
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                details.classList.add('hidden');
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function showAddScreen() {
+            document.getElementById('num1').value = '';
+            document.getElementById('pass1').value = '';
+            document.getElementById('num2').value = '';
+            document.getElementById('pass2').value = '';
+            showScreen('addStreakScreen');
+        }
+
+        function showScreen(screenId) {
+            document.getElementById('addStreakScreen').classList.add('hidden');
+            document.getElementById('executionScreen').classList.add('hidden');
+            document.getElementById('mainDashboardScreen').classList.add('hidden');
+
+            document.getElementById('addStreakScreen').classList.remove('flex');
+            document.getElementById('executionScreen').classList.remove('flex');
+            document.getElementById('mainDashboardScreen').classList.remove('flex');
+
+            const target = document.getElementById(screenId);
+            target.classList.remove('hidden');
+            target.classList.add('flex');
+        }
+
+        // جلب البيانات الأولية
+        fetchAndRenderStreaks();
+    </script>
+</body>
+</html>
+
