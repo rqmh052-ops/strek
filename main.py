@@ -33,19 +33,22 @@ CORS(app, origins=["*"])
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  ثوابت فودافون
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-AUTH_URL    = "https://mobile.vodafone.com.eg/auth/realms/vf-realm/protocol/openid-connect/token"
-SEND_URL    = "https://web.vodafone.com.eg/services/dxl/pj/journey/promoJourney"
-PAGE_URL    = "https://web.vodafone.com.eg/portal/bf/massSummerPromo26?isPostMessages=false"
-CLIENT_ID   = "AnaVF"
+AUTH_URL      = "https://mobile.vodafone.com.eg/auth/realms/vf-realm/protocol/openid-connect/token"
+SEND_URL      = "https://web.vodafone.com.eg/services/dxl/pj/journey/promoJourney"
+PAGE_URL      = "https://web.vodafone.com.eg/portal/bf/massSummerPromo26?isPostMessages=false"
+CLIENT_ID     = "AnaVF"
 CLIENT_SECRET = "dca0pbLUWXVhXR266Gw1iT5rqwvvJQoN"
-USER_AGENT  = "vodafoneandroid"
-ORIGIN      = "https://web.vodafone.com.eg"
-REFERER     = "https://web.vodafone.com.eg/portal/bf/massSummerPromo26/streak"
+# User-Agents الحقيقية كما يرسلها التطبيق
+USER_AGENT_AUTH = "okhttp/4.12.0"        # للتسجيل
+USER_AGENT_SEND = "vodafoneandroid"      # للإرسال
+ORIGIN        = "https://web.vodafone.com.eg"
+REFERER       = "https://web.vodafone.com.eg/portal/bf/massSummerPromo26/streak"
 
 POKE_COUNT             = 6
-EMOJI_CODES            = ["1F606", "1F607", "1F618"]
-DELAY_BETWEEN_REQUESTS = 1.5
-DELAY_BETWEEN_ROUNDS   = 5.0
+# الإيموجيات الجديدة المستخرجة من HAR الحقيقي
+EMOJI_CODES            = ["1FAC0", "1F621"]
+DELAY_BETWEEN_REQUESTS = 2.0    # زيادة التأخير لتجنب كود 555
+DELAY_BETWEEN_ROUNDS   = 8.0
 MAX_RETRIES            = 2
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -152,14 +155,15 @@ def load_sessions_from_file():
 #  منطق فودافون
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 def login_and_get_session(msisdn: str, password: str, log_callback):
-    sess = requests.Session()
-    sess.headers.update({
-        "User-Agent": USER_AGENT,
-        "Accept": "application/json",
+    # ━━━━ مرحلة 1: تسجيل الدخول بـ okhttp (كما يفعل التطبيق الحقيقي) ━━━━
+    auth_sess = requests.Session()
+    auth_sess.headers.update({
+        "User-Agent":    USER_AGENT_AUTH,
+        "Accept":        "application/json, text/plain, */*",
         "Accept-Language": "ar",
-        "Origin": ORIGIN,
-        "Referer": REFERER,
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Type":  "application/x-www-form-urlencoded",
+        "msisdn":        msisdn,
+        "clientId":      "AnaVodafoneAndroid",
     })
     payload = {
         "grant_type":    "password",
@@ -168,21 +172,29 @@ def login_and_get_session(msisdn: str, password: str, log_callback):
         "client_id":     CLIENT_ID,
         "client_secret": CLIENT_SECRET,
     }
-    resp = sess.post(AUTH_URL, data=payload, timeout=12)
+    resp = auth_sess.post(AUTH_URL, data=payload, timeout=15)
     if resp.status_code != 200:
         raise Exception(f"فشل تسجيل الدخول للرقم {msisdn}: كود {resp.status_code}")
 
     token = resp.json().get("access_token")
+
+    # ━━━━ مرحلة 2: جلسة الإرسال بـ vodafoneandroid (كما يفعل التطبيق الحقيقي) ━━━━
+    sess = requests.Session()
     sess.headers.update({
+        "User-Agent":    USER_AGENT_SEND,
         "Authorization": f"Bearer {token}",
         "msisdn":        msisdn,
         "clientId":      "WebsiteConsumer",
         "channel":       "APP_PORTAL",
         "Content-Type":  "application/json",
         "Accept":        "application/json",
+        "Accept-Language": "ar",
+        "Origin":        ORIGIN,
+        "Referer":       REFERER,
     })
+    # زيارة الصفحة لتسجيل الكوكيز (اختياري لكن يحاكي التطبيق الحقيقي)
     try:
-        sess.headers.update({"Accept": "text/html,*/*"})
+        sess.headers.update({"Accept": "text/html,application/xhtml+xml,*/*"})
         sess.get(PAGE_URL, timeout=10)
     except Exception:
         pass
