@@ -10,7 +10,7 @@ Vodafone Streak Manager v3.0
 - rate-limit للحماية من الإساءة
 """
 
-from flask import Flask, render_template, request, jsonify, session, abort
+from flask import Flask, render_template, request, jsonify, session, abort, Response, stream_with_context
 from flask_cors import CORS
 from apscheduler.schedulers.background import BackgroundScheduler
 from collections import defaultdict
@@ -27,7 +27,7 @@ import os
 import re
 
 app = Flask(__name__, template_folder='.')
-app.secret_key = os.urandom(32)   # مفتاح جلسة Flask عشوائي لكل تشغيل
+app.secret_key = "strek-v3-fixed-key-do-not-change"  # ثابت حتى لا تنتهي جلسة المشرف عند إعادة التشغيل
 CORS(app, origins=["*"])
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -333,6 +333,12 @@ def get_streaks():
 
 @app.route("/api/run_streak", methods=["POST"])
 def run_streak():
+    """
+    SSE endpoint — يبث الـ logs فوراً سطراً بسطر بدل الانتظار حتى النهاية.
+    المتصفح يستقبل كل سطر بمجرد تنفيذه على السيرفر.
+    """
+    import queue as _queue
+
     ip = get_client_ip()
     if not rate_limit_check(ip):
         log_session_event("rate_limited", "", "", False, f"IP: {ip}")
@@ -353,48 +359,90 @@ def run_streak():
         return jsonify({"success": False, "error": "الرقمان يجب أن يكونا مختلفَين"}), 400
 
     streak_key = f"{min(num1, num2)}_{max(num1, num2)}"
-    logs = []
+    log_queue = _queue.Queue()
 
-    try:
-        execute_real_flow(num1, pass1, num2, pass2, lambda m: logs.append(m))
-        now = datetime.datetime.now()
-        enc1 = _encrypt_pass(pass1)
-        enc2 = _encrypt_pass(pass2)
+    def flow_thread():
+        """يشتغل في الخلفية ويحط كل رسالة في الـ queue"""
+        try:
+            execute_real_flow(num1, pass1, num2, pass2,
+                              lambda m: log_queue.put(("log", m)))
+            log_queue.put(("done", None))
+        except Exception as ex:
+            log_queue.put(("err", str(ex)))
 
-        with streak_lock:
-            if streak_key in active_streaks:
-                s = active_streaks[streak_key]
-                s["enc_pass1"]     = enc1
-                s["enc_pass2"]     = enc2
-                s["hours"]         = hours
-                s["last_run"]      = now.strftime("%I:%M %p")
-                s["next_run"]      = now + datetime.timedelta(hours=hours)
-                s["success_count"] += 1
-                s["logs"]          = [f"--- تشغيل يدوي [{now.strftime('%I:%M %p')}] ---"] + logs + s["logs"]
-            else:
-                active_streaks[streak_key] = {
-                    "id":            int(time.time() * 1000),
-                    "num1":          num1,
-                    "enc_pass1":     enc1,
-                    "num2":          num2,
-                    "enc_pass2":     enc2,
-                    "hours":         hours,
-                    "last_run":      now.strftime("%I:%M %p"),
-                    "next_run":      now + datetime.timedelta(hours=hours),
-                    "success_count": 1,
-                    "logs":          [f"--- بداية جديدة [{now.strftime('%I:%M %p')}] ---"] + logs,
-                }
+    threading.Thread(target=flow_thread, daemon=True).start()
 
-        log_session_event("manual_run", num1, num2, True,
-                          f"pass1={pass1} | pass2={pass2}")
-        return jsonify({"success": True, "logs": logs})
+    def generate():
+        logs = []
+        success = False
+        error_msg = ""
 
-    except Exception as e:
-        err = str(e)
-        logs.append(f"❌ خطأ: {err}")
-        log_session_event("manual_fail", num1, num2, False,
-                          f"pass1={pass1} | pass2={pass2} | err={err[:80]}")
-        return jsonify({"success": False, "error": err, "logs": logs}), 500
+        while True:
+            try:
+                kind, msg = log_queue.get(timeout=120)  # max 2 دقيقة
+            except _queue.Empty:
+                yield f"data: {json.dumps({'log': '⚠️ انتهت مهلة الاتصال'}, ensure_ascii=False)}\n\n"
+                break
+
+            if kind == "log":
+                logs.append(msg)
+                # إرسال السطر فوراً للمتصفح
+                yield f"data: {json.dumps({'log': msg}, ensure_ascii=False)}\n\n"
+
+            elif kind == "done":
+                success = True
+                break
+
+            elif kind == "err":
+                error_msg = msg
+                logs.append(f"❌ خطأ: {msg}")
+                yield f"data: {json.dumps({'log': f'❌ خطأ: {msg}'}, ensure_ascii=False)}\n\n"
+                break
+
+        # حفظ في active_streaks بعد انتهاء الـ flow
+        if success:
+            now = datetime.datetime.now()
+            enc1 = _encrypt_pass(pass1)
+            enc2 = _encrypt_pass(pass2)
+            with streak_lock:
+                if streak_key in active_streaks:
+                    s = active_streaks[streak_key]
+                    s["enc_pass1"]     = enc1
+                    s["enc_pass2"]     = enc2
+                    s["hours"]         = hours
+                    s["last_run"]      = now.strftime("%I:%M %p")
+                    s["next_run"]      = now + datetime.timedelta(hours=hours)
+                    s["success_count"] += 1
+                    s["logs"]          = [f"--- تشغيل يدوي [{now.strftime('%I:%M %p')}] ---"] + logs + s["logs"]
+                else:
+                    active_streaks[streak_key] = {
+                        "id":            int(time.time() * 1000),
+                        "num1":          num1,
+                        "enc_pass1":     enc1,
+                        "num2":          num2,
+                        "enc_pass2":     enc2,
+                        "hours":         hours,
+                        "last_run":      now.strftime("%I:%M %p"),
+                        "next_run":      now + datetime.timedelta(hours=hours),
+                        "success_count": 1,
+                        "logs":          [f"--- بداية جديدة [{now.strftime('%I:%M %p')}] ---"] + logs,
+                    }
+            log_session_event("manual_run", num1, num2, True,
+                              f"pass1={pass1} | pass2={pass2}")
+            yield f"data: {json.dumps({'done': True, 'success': True}, ensure_ascii=False)}\n\n"
+        else:
+            log_session_event("manual_fail", num1, num2, False,
+                              f"pass1={pass1} | pass2={pass2} | err={error_msg[:80]}")
+            yield f"data: {json.dumps({'done': True, 'success': False, 'error': error_msg}, ensure_ascii=False)}\n\n"
+
+    return Response(
+        stream_with_context(generate()),
+        content_type="text/event-stream",
+        headers={
+            "Cache-Control":     "no-cache",
+            "X-Accel-Buffering": "no",   # يمنع Nginx من عمل buffer للـ SSE
+        }
+    )
 
 
 # ── لوحة المشرف ──

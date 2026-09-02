@@ -394,44 +394,80 @@
         logBox.innerHTML = '<div class="log-info">⏳ جاري الاتصال بالسيرفر...</div>';
         document.getElementById('execProgress').style.width = '10%';
 
+        // ── SSE: نرسل POST أولاً عبر fetch لتمرير JSON body،
+        //    ثم السيرفر يرد بـ text/event-stream تقرأه بـ ReadableStream ──
+        let response;
         try {
-            const res = await fetch('/api/run_streak', {
+            response = await fetch('/api/run_streak', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ num1, pass1, num2, pass2, hours })
             });
-
-            if (res.status === 429) {
-                toast('⚠️ تجاوزت الحد المسموح، انتظر دقيقة');
-                showScreen('scAddStreak'); return;
-            }
-
-            const result = await res.json();
-            logBox.innerHTML = '';
-
-            (result.logs || []).forEach(line => {
-                const d = document.createElement('div');
-                d.className = colorClass(line);
-                d.textContent = line;
-                logBox.appendChild(d);
-            });
-            logBox.scrollTop = logBox.scrollHeight;
-            document.getElementById('execProgress').style.width = '100%';
-
-            if (result.success) {
-                setTimeout(() => {
-                    fetchStreaks();
-                    showScreen('scDashboard');
-                }, 1400);
-            } else {
-                const e = document.createElement('div');
-                e.className = 'log-err font-bold mt-1';
-                e.textContent = `⛔ ${result.error || 'فشلت العملية'}`;
-                logBox.appendChild(e);
-            }
         } catch (err) {
             toast('خطأ في الاتصال: ' + err.message);
             showScreen('scAddStreak');
+            return;
+        }
+
+        if (response.status === 429) {
+            toast('⚠️ تجاوزت الحد المسموح، انتظر دقيقة');
+            showScreen('scAddStreak'); return;
+        }
+
+        // مسح رسالة "جاري الاتصال" فور بدء الاستقبال
+        logBox.innerHTML = '';
+        document.getElementById('execProgress').style.width = '20%';
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        const addLog = (line) => {
+            const d = document.createElement('div');
+            d.className = colorClass(line);
+            d.textContent = line;
+            logBox.appendChild(d);
+            logBox.scrollTop = logBox.scrollHeight;
+        };
+
+        // قراءة الـ SSE stream
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop(); // الجزء غير المكتمل
+
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                try {
+                    const msg = JSON.parse(line.slice(6));
+
+                    if (msg.log) {
+                        // سطر log عادي — يظهر فوراً
+                        addLog(msg.log);
+                        // تحريك شريط التقدم تدريجياً
+                        const cur = parseFloat(document.getElementById('execProgress').style.width) || 20;
+                        if (cur < 90) document.getElementById('execProgress').style.width = (cur + 2) + '%';
+                    }
+
+                    if (msg.done) {
+                        document.getElementById('execProgress').style.width = '100%';
+                        if (msg.success) {
+                            setTimeout(() => {
+                                fetchStreaks();
+                                showScreen('scDashboard');
+                            }, 1200);
+                        } else {
+                            const e = document.createElement('div');
+                            e.className = 'log-err font-bold mt-1';
+                            e.textContent = `⛔ ${msg.error || 'فشلت العملية'}`;
+                            logBox.appendChild(e);
+                        }
+                    }
+                } catch (_) {}
+            }
         }
     }
 
