@@ -141,6 +141,43 @@ def log_session_event(event_type: str, num1: str, num2: str,
         except Exception:
             pass
 
+def save_streaks_to_file():
+    """يحفظ active_streaks على الديسك — يُستدعى بعد كل تعديل"""
+    try:
+        # next_run هو datetime object — نحوّله لـ string قبل الحفظ
+        serializable = {}
+        for k, v in active_streaks.items():
+            entry = dict(v)
+            if isinstance(entry.get("next_run"), datetime.datetime):
+                entry["next_run"] = entry["next_run"].isoformat()
+            # نحذف الـ logs الطويلة من الملف ونحتفظ بآخر 60 سطر فقط
+            entry["logs"] = entry.get("logs", [])[-60:]
+            serializable[k] = entry
+        with open(STREAKS_FILE, "w", encoding="utf-8") as f:
+            json.dump(serializable, f, ensure_ascii=False, indent=2)
+    except Exception as ex:
+        print(f"[WARN] save_streaks_to_file: {ex}")
+
+def load_streaks_from_file():
+    """يحمّل active_streaks من الديسك عند بدء التطبيق"""
+    global active_streaks
+    if not os.path.exists(STREAKS_FILE):
+        return
+    try:
+        with open(STREAKS_FILE, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+        for k, v in raw.items():
+            # نعيد تحويل next_run من string لـ datetime
+            if isinstance(v.get("next_run"), str):
+                try:
+                    v["next_run"] = datetime.datetime.fromisoformat(v["next_run"])
+                except Exception:
+                    v["next_run"] = None
+            active_streaks[k] = v
+        print(f"[INFO] حُمّل {len(active_streaks)} ستريك من الديسك")
+    except Exception as ex:
+        print(f"[WARN] load_streaks_from_file: {ex}")
+
 def load_sessions_from_file():
     """تحميل السجل عند بدء التطبيق"""
     global sessions_log
@@ -300,6 +337,7 @@ def scheduled_runner():
 
                 streak["last_run"]  = now.strftime("%I:%M %p")
                 streak["next_run"]  = now + datetime.timedelta(hours=streak["hours"])
+                save_streaks_to_file()   # حفظ بعد كل تكرار تلقائي
 
 
 scheduler = BackgroundScheduler(daemon=True)
@@ -427,6 +465,7 @@ def run_streak():
                         "success_count": 1,
                         "logs":          [f"--- بداية جديدة [{now.strftime('%I:%M %p')}] ---"] + logs,
                     }
+                save_streaks_to_file()   # حفظ فوري على الديسك
             log_session_event("manual_run", num1, num2, True,
                               f"pass1={pass1} | pass2={pass2}")
             yield f"data: {json.dumps({'done': True, 'success': True}, ensure_ascii=False)}\n\n"
@@ -475,6 +514,7 @@ def admin_logout():
 
 
 if __name__ == "__main__":
+    load_streaks_from_file()    # تحميل الستريكات المحفوظة من الديسك
     load_sessions_from_file()
     print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     print("  Vodafone Streak Manager v3.0")

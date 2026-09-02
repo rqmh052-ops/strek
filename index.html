@@ -480,6 +480,7 @@
             cachedStreaks = await res.json();
             renderStreaks(cachedStreaks);
         } catch (e) { console.error(e); }
+        return cachedStreaks;   // يُمكّن .then() عند الاستدعاء من الـ init
     }
 
     function renderStreaks(list) {
@@ -714,8 +715,17 @@
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     //  تهيئة
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    showScreen('scAddStreak');
-    fetchStreaks();
+    // ── الشاشة الافتراضية عند فتح الموقع هي dashboard دائماً ──
+    // بعد تحميل الستريكات: إذا فيه ستريكات محفوظة ابق على dashboard،
+    // إذا ما فيه شيء انتقل لشاشة الإضافة
+    fetchStreaks().then(() => {
+        if (cachedStreaks.length > 0) {
+            showScreen('scDashboard');
+        } else {
+            showScreen('scAddStreak');
+        }
+    });
+
     // تحديث كل 30 ثانية إذا كانت لوحة الستريكات مفتوحة
     setInterval(() => {
         const dash = document.getElementById('scDashboard');
