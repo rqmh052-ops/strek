@@ -3,12 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>أتمتة الستريك - Vodafone Streak Manager</title>
-    <!-- Tailwind CSS -->
+    <title>أتمتة الستريك — Vodafone Streak v3</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts (Cairo) -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 
     <script>
@@ -16,394 +13,678 @@
             theme: {
                 extend: {
                     colors: {
-                        vfRed: '#E60000',
-                        vfDarkRed: '#800000',
-                        vfCrimson: '#4a0000',
-                        vfDarkBg: '#0a0a0a',
-                        vfCard: '#121212',
-                        vfBorder: '#262626'
+                        vfRed:    '#E60000',
+                        vfDark:   '#800000',
+                        vfCrimson:'#4a0000',
+                        vfBg:     '#080808',
+                        vfCard:   '#111111',
+                        vfBorder: '#222222',
                     },
-                    fontFamily: {
-                        cairo: ['Cairo', 'sans-serif'],
-                    }
+                    fontFamily: { cairo: ['Cairo', 'sans-serif'] }
                 }
             }
         }
     </script>
 
     <style>
+        * { box-sizing: border-box; }
         html, body {
-            touch-action: none;
-            overflow: hidden;
-            height: 100vh;
-            width: 100vw;
+            touch-action: none; overflow: hidden;
+            height: 100vh; width: 100vw;
             font-family: 'Cairo', sans-serif;
-            user-select: none;
-            background: #050505;
+            user-select: none; background: #050505;
         }
 
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 4px;
+        /* scrollbar */
+        .scr::-webkit-scrollbar { width: 3px; }
+        .scr::-webkit-scrollbar-track { background: #111; }
+        .scr::-webkit-scrollbar-thumb { background: #E60000; border-radius: 4px; }
+
+        /* glow on card */
+        @keyframes glow {
+            0%,100% { box-shadow: 0 0 14px rgba(230,0,0,.22); border-color: rgba(230,0,0,.35); }
+            50%      { box-shadow: 0 0 26px rgba(230,0,0,.45); border-color: rgba(230,0,0,.65); }
         }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #121212;
-            border-radius: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #e60000;
-            border-radius: 8px;
+        .glow-card { animation: glow 3.5s infinite ease-in-out; }
+
+        .glass {
+            background: rgba(12,12,12,.96);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
         }
 
-        @keyframes softRedGlow {
-            0%, 100% { box-shadow: 0 0 15px rgba(230, 0, 0, 0.25); border-color: rgba(230, 0, 0, 0.4); }
-            50% { box-shadow: 0 0 25px rgba(230, 0, 0, 0.45); border-color: rgba(230, 0, 0, 0.7); }
+        /* input focus */
+        input:focus { outline: none; border-color: #E60000 !important; }
+
+        /* status badge pulse */
+        @keyframes pulse-dot {
+            0%,100% { opacity:1; }
+            50%      { opacity:.4; }
+        }
+        .pulse-dot { animation: pulse-dot 1.4s infinite; }
+
+        /* admin modal overlay */
+        .overlay {
+            position: fixed; inset:0;
+            background: rgba(0,0,0,.8);
+            backdrop-filter: blur(6px);
+            z-index: 999;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .modal-box {
+            background:#111; border:1px solid #333;
+            border-radius:1.25rem; padding:1.5rem;
+            width:86vw; max-width:360px;
         }
 
-        .animated-border {
-            animation: softRedGlow 3.5s infinite ease-in-out;
-        }
-
-        .glass-box {
-            background: rgba(14, 14, 14, 0.94);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-        }
+        /* log colors */
+        .log-ok   { color: #4ade80; }
+        .log-err  { color: #f87171; }
+        .log-warn { color: #fbbf24; }
+        .log-info { color: #94a3b8; }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen text-gray-200 relative">
+<body class="flex items-center justify-center min-h-screen text-gray-200">
 
-    <div class="absolute inset-0 overflow-hidden pointer-events-none">
-        <div class="absolute -top-40 -left-40 w-96 h-96 bg-vfCrimson opacity-20 rounded-full blur-3xl"></div>
-        <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-vfDarkRed opacity-15 rounded-full blur-3xl"></div>
+    <!-- خلفية ديكورية -->
+    <div class="absolute inset-0 pointer-events-none overflow-hidden">
+        <div class="absolute -top-44 -left-44 w-96 h-96 bg-vfCrimson opacity-20 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-44 -right-44 w-96 h-96 bg-vfDark opacity-15 rounded-full blur-3xl"></div>
     </div>
 
-    <main class="relative w-[92vw] max-w-[440px] h-[90vh] max-h-[720px] glass-box rounded-3xl border border-vfRed/40 animated-border flex flex-col justify-between overflow-hidden p-5 z-10">
-        
-        <!-- رأس التطبيق مع اسم المطور العريض المطلوبة -->
-        <header class="flex flex-col border-b border-vfBorder pb-2.5 space-y-1.5">
-            <div class="text-center bg-black/60 border border-vfBorder py-1 rounded-xl">
-                <span class="text-[11px] font-extrabold text-gray-300">
-                    المطور: <span class="text-vfRed text-xs tracking-wider">أيمن | AYMAN</span>
-                </span>
-            </div>
+    <!-- البطاقة الرئيسية -->
+    <main class="relative w-[92vw] max-w-[440px] h-[92vh] max-h-[740px] glass rounded-3xl border border-vfRed/40 glow-card flex flex-col overflow-hidden z-10">
 
-            <div class="flex items-center justify-between pt-0.5">
+        <!-- ━━━━━━━━━━━━ الهيدر ━━━━━━━━━━━━ -->
+        <header class="px-4 pt-3 pb-2 border-b border-vfBorder space-y-2 flex-shrink-0">
+
+            <!-- شريط المطور + زر الإعدادات -->
+            <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-vfRed to-vfDarkRed flex items-center justify-center text-white font-bold text-sm shadow-md">
-                        <i class="fa-solid fa-fire text-white"></i>
+                    <!-- أيقونة التطبيق -->
+                    <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-vfRed to-vfDark flex items-center justify-center shadow-md shadow-vfRed/30">
+                        <i class="fa-solid fa-fire text-white text-sm"></i>
                     </div>
                     <div>
-                        <h1 class="font-extrabold text-sm leading-tight text-white">أتمتة ستريك فودافون</h1>
-                        <p class="text-[9px] text-gray-400">سيرفر التشغيل الحقيقي v2.6</p>
+                        <div class="font-extrabold text-[13px] leading-tight text-white">أتمتة ستريك فودافون</div>
+                        <div class="text-[9px] text-gray-500">v3.0 — سيرفر حقيقي</div>
                     </div>
                 </div>
-                <div class="flex items-center gap-1.5 bg-vfRed/10 border border-vfRed/30 px-2 py-0.5 rounded-full">
-                    <span class="w-1.5 h-1.5 rounded-full bg-vfRed animate-ping"></span>
+
+                <!-- زر الإعدادات -->
+                <button onclick="openAdminModal()"
+                        class="flex items-center gap-1.5 bg-vfCard border border-vfBorder hover:border-vfRed/50 px-2.5 py-1 rounded-xl transition group">
+                    <i class="fa-solid fa-gear text-gray-400 group-hover:text-vfRed transition text-xs"></i>
+                    <span class="text-[10px] text-gray-400 group-hover:text-white transition font-bold">إعدادات</span>
+                </button>
+            </div>
+
+            <!-- شريط المطور واتصال السيرفر -->
+            <div class="flex items-center justify-between">
+                <div class="bg-black/50 border border-vfBorder rounded-lg px-2 py-0.5">
+                    <span class="text-[9px] text-gray-400">المطور: </span>
+                    <span class="text-[9px] font-extrabold text-vfRed tracking-wider">أيمن | AYMAN</span>
+                </div>
+                <div class="flex items-center gap-1.5 bg-vfRed/10 border border-vfRed/25 px-2 py-0.5 rounded-full">
+                    <span class="w-1.5 h-1.5 rounded-full bg-vfRed pulse-dot"></span>
                     <span class="text-[9px] font-bold text-red-400">سيرفر متصل</span>
                 </div>
             </div>
         </header>
 
-        <!-- محتوى الشاشات -->
-        <div id="contentArea" class="flex-1 my-2.5 overflow-hidden relative">
-            
-            <!-- 1. شاشة إضافة ثنائية ستريك جديدة -->
-            <section id="addStreakScreen" class="h-full flex flex-col justify-between overflow-y-auto custom-scrollbar pr-1">
-                <div class="space-y-2.5">
-                    <div class="text-center pt-1">
-                        <h2 class="text-xs font-bold text-white">إضافة ثنائية جديدة</h2>
-                        <p class="text-[10px] text-gray-400">أدخل رقمين لتشغيل وإعادة الستريك بينهما تلقائياً</p>
-                    </div>
+        <!-- ━━━━━━━━━━━━ منطقة المحتوى ━━━━━━━━━━━━ -->
+        <div id="contentArea" class="flex-1 overflow-hidden relative px-4 py-2">
 
-                    <!-- الحساب الأول -->
-                    <div class="bg-vfCard border border-vfBorder rounded-xl p-2.5 space-y-1.5">
-                        <div class="flex items-center justify-between text-xs font-bold text-red-500">
-                            <span><i class="fa-solid fa-phone-flip ml-1"></i> الرقم الأول</span>
-                            <span class="text-[9px] bg-red-950 text-red-400 px-2 py-0.5 rounded border border-red-900/50">#1</span>
-                        </div>
-                        <input type="tel" id="num1" placeholder="رقم الموبايل الأول (010...)" class="w-full bg-black/60 border border-vfBorder rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-vfRed transition text-white placeholder-gray-600">
-                        <input type="password" id="pass1" placeholder="كلمة المرور" class="w-full bg-black/60 border border-vfBorder rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-vfRed transition text-white placeholder-gray-600">
-                    </div>
+            <!-- 1. شاشة إضافة ستريك -->
+            <section id="scAddStreak" class="h-full flex flex-col gap-2.5 overflow-y-auto scr">
+                <div class="text-center pt-1">
+                    <h2 class="text-xs font-bold text-white">إضافة ثنائية جديدة</h2>
+                    <p class="text-[9px] text-gray-500">أدخل رقمين لتشغيل ستريك حقيقي تلقائياً</p>
+                </div>
 
-                    <!-- الحساب الثاني -->
-                    <div class="bg-vfCard border border-vfBorder rounded-xl p-2.5 space-y-1.5">
-                        <div class="flex items-center justify-between text-xs font-bold text-red-500">
-                            <span><i class="fa-solid fa-phone-flip ml-1"></i> الرقم الثاني</span>
-                            <span class="text-[9px] bg-red-950 text-red-400 px-2 py-0.5 rounded border border-red-900/50">#2</span>
-                        </div>
-                        <input type="tel" id="num2" placeholder="رقم الموبايل الثاني (010...)" class="w-full bg-black/60 border border-vfBorder rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-vfRed transition text-white placeholder-gray-600">
-                        <input type="password" id="pass2" placeholder="كلمة المرور" class="w-full bg-black/60 border border-vfBorder rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-vfRed transition text-white placeholder-gray-600">
+                <!-- الرقم الأول -->
+                <div class="bg-vfCard border border-vfBorder rounded-2xl p-3 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold text-vfRed"><i class="fa-solid fa-mobile-screen-button ml-1"></i>الرقم الأول</span>
+                        <span class="text-[8px] bg-red-950/60 text-red-400 px-2 py-0.5 rounded border border-red-900/40">#1</span>
                     </div>
+                    <input id="num1"  type="tel"      placeholder="رقم الموبايل (01xxxxxxxxx)"
+                           class="w-full bg-black/60 border border-vfBorder rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 transition">
+                    <input id="pass1" type="password" placeholder="كلمة المرور"
+                           class="w-full bg-black/60 border border-vfBorder rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 transition">
+                </div>
 
-                    <!-- التكرار التلقائي -->
-                    <div class="bg-vfCard border border-vfBorder rounded-xl p-2.5 space-y-1.5">
-                        <div class="flex items-center justify-between text-xs font-bold">
-                            <span class="text-gray-300"><i class="fa-regular fa-clock ml-1 text-red-500"></i> وقت التكرار التلقائي:</span>
-                            <span id="intervalValue" class="text-vfRed font-extrabold text-xs">10 ساعات</span>
-                        </div>
-                        <input type="range" id="intervalRange" min="1" max="23" value="10" class="w-full accent-vfRed cursor-pointer bg-black/80 h-1.5 rounded-lg">
-                        <div class="flex justify-between text-[9px] text-gray-500 font-mono">
-                            <span>1 ساعة</span>
-                            <span>10 ساعات (الافتراضي)</span>
-                            <span>23 ساعة</span>
-                        </div>
+                <!-- الرقم الثاني -->
+                <div class="bg-vfCard border border-vfBorder rounded-2xl p-3 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold text-vfRed"><i class="fa-solid fa-mobile-screen-button ml-1"></i>الرقم الثاني</span>
+                        <span class="text-[8px] bg-red-950/60 text-red-400 px-2 py-0.5 rounded border border-red-900/40">#2</span>
+                    </div>
+                    <input id="num2"  type="tel"      placeholder="رقم الموبايل (01xxxxxxxxx)"
+                           class="w-full bg-black/60 border border-vfBorder rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 transition">
+                    <input id="pass2" type="password" placeholder="كلمة المرور"
+                           class="w-full bg-black/60 border border-vfBorder rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 transition">
+                </div>
+
+                <!-- التكرار -->
+                <div class="bg-vfCard border border-vfBorder rounded-2xl p-3 space-y-1.5">
+                    <div class="flex items-center justify-between text-[10px]">
+                        <span class="text-gray-300 font-bold"><i class="fa-regular fa-clock ml-1 text-vfRed"></i>التكرار التلقائي</span>
+                        <span id="intervalLabel" class="text-vfRed font-extrabold">10 ساعات</span>
+                    </div>
+                    <input id="intervalRange" type="range" min="1" max="23" value="10"
+                           class="w-full accent-vfRed cursor-pointer h-1.5 rounded-lg bg-black/80">
+                    <div class="flex justify-between text-[8px] text-gray-600">
+                        <span>1 ساعة</span><span>10 (افتراضي)</span><span>23 ساعة</span>
                     </div>
                 </div>
 
-                <button onclick="startRealStreakProcess()" class="w-full mt-2 bg-vfRed hover:bg-red-700 text-white font-bold py-2 px-4 rounded-xl active:scale-[0.98] transition flex items-center justify-center gap-2 text-xs shadow-md shadow-vfRed/20">
-                    <i class="fa-solid fa-play text-xs"></i>
+                <!-- زر التشغيل -->
+                <button onclick="startStreak()"
+                        class="w-full bg-vfRed hover:bg-red-700 active:scale-[.98] text-white font-bold py-2.5 rounded-2xl transition flex items-center justify-center gap-2 text-xs shadow-lg shadow-vfRed/25 mt-1">
+                    <i class="fa-solid fa-play"></i>
                     تفعيل وتشغيل الستريك الحقيقي
                 </button>
             </section>
 
-            <!-- 2. لوحة تنفيذ العمليات المحاكية والمباشرة -->
-            <section id="executionScreen" class="h-full hidden flex-col justify-between overflow-hidden">
-                <div class="text-center py-2">
-                    <div class="inline-block relative mb-1.5">
-                        <div class="w-10 h-10 border-2 border-vfBorder border-t-vfRed rounded-full animate-spin flex items-center justify-center mx-auto"></div>
+            <!-- 2. شاشة التنفيذ -->
+            <section id="scExecution" class="h-full hidden flex-col gap-2 overflow-hidden">
+                <div class="text-center py-2 flex-shrink-0">
+                    <div class="relative w-10 h-10 mx-auto mb-1.5">
+                        <div class="w-10 h-10 border-2 border-vfBorder border-t-vfRed rounded-full animate-spin absolute inset-0"></div>
                         <i class="fa-solid fa-bolt text-vfRed text-xs absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></i>
                     </div>
-                    <h3 class="font-bold text-xs text-white">جاري الاتصال بالسيرفر والتنفيذ...</h3>
-                    <p class="text-[9px] text-gray-400">يتم نقل الـ POKEs والـ EMOJIs فعلياً</p>
+                    <h3 class="font-bold text-xs text-white">جاري الاتصال والتنفيذ...</h3>
+                    <p class="text-[9px] text-gray-500">يتم تنفيذ الـ POKEs والإيموجيات فعلياً</p>
                 </div>
 
-                <div id="logsStepContainer" class="flex-1 bg-black/90 border border-vfBorder rounded-xl p-2.5 my-2 overflow-y-auto custom-scrollbar font-mono text-[9px] space-y-1">
+                <div id="execLogs"
+                     class="flex-1 bg-black/90 border border-vfBorder rounded-2xl p-2.5 overflow-y-auto scr font-mono text-[9px] space-y-0.5 dir-ltr">
                 </div>
 
-                <div class="w-full bg-vfCard rounded-full h-1 overflow-hidden">
-                    <div id="progressBar" class="bg-vfRed h-full w-1/3 animate-pulse"></div>
+                <div class="w-full bg-vfCard rounded-full h-1 overflow-hidden flex-shrink-0">
+                    <div id="execProgress" class="bg-vfRed h-full w-1/3 animate-pulse"></div>
                 </div>
             </section>
 
-            <!-- 3. الشاشة الرئيسية للستريكات المفعلة -->
-            <section id="mainDashboardScreen" class="h-full hidden flex-col justify-between overflow-y-auto custom-scrollbar pr-1">
-                <div class="space-y-2.5">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-xs font-bold text-gray-300">قائمة الستريكات المفعلة</h3>
-                        <span class="text-[9px] text-gray-500" id="totalCountText">العدد: 0</span>
-                    </div>
-
-                    <div id="streaksContainer" class="space-y-2.5">
-                    </div>
+            <!-- 3. لوحة الستريكات -->
+            <section id="scDashboard" class="h-full hidden flex-col gap-2.5 overflow-y-auto scr">
+                <div class="flex items-center justify-between flex-shrink-0">
+                    <h3 class="text-xs font-bold text-gray-300">الستريكات المفعّلة</h3>
+                    <span id="streakCount" class="text-[9px] text-gray-500">العدد: 0</span>
                 </div>
 
-                <button onclick="showAddScreen()" class="w-full mt-2 bg-vfCard hover:bg-vfBorder border border-vfBorder text-white font-bold py-2 px-4 rounded-xl active:scale-[0.98] transition flex items-center justify-center gap-2 text-xs">
-                    <i class="fa-solid fa-plus text-vfRed"></i>
-                    إضافة رقمين آخرين
+                <div id="streaksList" class="space-y-2.5 flex-1 overflow-y-auto scr"></div>
+
+                <button onclick="goToAdd()"
+                        class="w-full flex-shrink-0 bg-vfCard hover:bg-vfBorder border border-vfBorder text-white font-bold py-2 rounded-2xl transition flex items-center justify-center gap-2 text-xs mt-1">
+                    <i class="fa-solid fa-plus text-vfRed"></i> إضافة رقمين آخرين
                 </button>
             </section>
 
         </div>
 
-        <footer class="border-t border-vfBorder pt-2 text-center flex items-center justify-between text-[9px] text-gray-500">
+        <!-- ━━━━━━━━━━━━ الفوتر ━━━━━━━━━━━━ -->
+        <footer class="px-4 py-2 border-t border-vfBorder flex items-center justify-between text-[9px] text-gray-600 flex-shrink-0">
             <span>حقوق الأتمتة محفوظة لـ AYMAN</span>
-            <span class="flex items-center gap-1 text-gray-400"><i class="fa-solid fa-shield-halved text-vfRed"></i> سيرفر كود موثوق</span>
+            <span class="flex items-center gap-1 text-gray-500">
+                <i class="fa-solid fa-shield-halved text-vfRed/70"></i>
+                سيرفر موثوق v3
+            </span>
         </footer>
-
     </main>
 
-    <!-- إشعار Toast للنسخ -->
-    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-vfCard border border-vfRed text-white text-xs px-4 py-2 rounded-xl shadow-lg opacity-0 pointer-events-none transition-all duration-300 z-50 flex items-center gap-2">
+    <!-- ━━━━━━━━━━━━ Toast ━━━━━━━━━━━━ -->
+    <div id="toast"
+         class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-vfCard border border-vfRed/60 text-white text-xs px-4 py-2 rounded-2xl shadow-lg opacity-0 pointer-events-none transition-all duration-300 z-50 flex items-center gap-2">
         <i class="fa-solid fa-circle-check text-vfRed"></i>
-        <span id="toastMsg">تم نسخ سجل الأخطاء بنجاح!</span>
+        <span id="toastMsg">تم!</span>
     </div>
 
+    <!-- ━━━━━━━━━━━━ مودال كلمة مرور الإعدادات ━━━━━━━━━━━━ -->
+    <div id="adminPasswordModal" class="overlay hidden">
+        <div class="modal-box space-y-4">
+            <div class="text-center">
+                <div class="w-12 h-12 rounded-2xl bg-vfRed/10 border border-vfRed/30 mx-auto flex items-center justify-center mb-2">
+                    <i class="fa-solid fa-lock text-vfRed text-lg"></i>
+                </div>
+                <h3 class="font-extrabold text-sm text-white">لوحة المشرف</h3>
+                <p class="text-[10px] text-gray-500 mt-0.5">أدخل كلمة المرور للدخول</p>
+            </div>
+            <input id="adminPassInput" type="password" placeholder="كلمة المرور..."
+                   class="w-full bg-black/70 border border-vfBorder focus:border-vfRed rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 transition"
+                   onkeydown="if(event.key==='Enter') submitAdminPass()">
+            <div id="adminPassError" class="text-[10px] text-red-400 text-center hidden">كلمة المرور غير صحيحة</div>
+            <div class="flex gap-2">
+                <button onclick="closeAdminModal()"
+                        class="flex-1 bg-vfCard border border-vfBorder text-gray-400 font-bold py-2 rounded-xl text-xs hover:text-white transition">
+                    إلغاء
+                </button>
+                <button onclick="submitAdminPass()"
+                        class="flex-1 bg-vfRed hover:bg-red-700 text-white font-bold py-2 rounded-xl text-xs transition">
+                    دخول
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ━━━━━━━━━━━━ مودال لوحة المشرف (السجلات) ━━━━━━━━━━━━ -->
+    <div id="adminPanelModal" class="overlay hidden">
+        <div class="modal-box" style="max-height:88vh; display:flex; flex-direction:column;">
+            <!-- رأس اللوحة -->
+            <div class="flex items-center justify-between mb-3 flex-shrink-0">
+                <div>
+                    <h3 class="font-extrabold text-sm text-white flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-vfRed"></i>
+                        سجل الجلسات الكامل
+                    </h3>
+                    <p class="text-[9px] text-gray-500 mt-0.5">جميع العمليات منذ آخر تشغيل للسيرفر</p>
+                </div>
+                <button onclick="closeAdminPanel()"
+                        class="w-8 h-8 rounded-xl bg-vfCard border border-vfBorder flex items-center justify-center text-gray-400 hover:text-white hover:border-red-500 transition">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                </button>
+            </div>
+
+            <!-- إحصاء سريع -->
+            <div id="adminStats" class="grid grid-cols-3 gap-2 mb-3 flex-shrink-0">
+                <div class="bg-black/60 border border-vfBorder rounded-xl p-2 text-center">
+                    <div id="statTotal" class="font-extrabold text-white text-sm">0</div>
+                    <div class="text-[8px] text-gray-500">إجمالي</div>
+                </div>
+                <div class="bg-black/60 border border-vfBorder rounded-xl p-2 text-center">
+                    <div id="statSuccess" class="font-extrabold text-green-400 text-sm">0</div>
+                    <div class="text-[8px] text-gray-500">ناجحة</div>
+                </div>
+                <div class="bg-black/60 border border-vfBorder rounded-xl p-2 text-center">
+                    <div id="statFail" class="font-extrabold text-red-400 text-sm">0</div>
+                    <div class="text-[8px] text-gray-500">فاشلة</div>
+                </div>
+            </div>
+
+            <!-- قائمة السجلات -->
+            <div id="adminSessionsList"
+                 class="flex-1 overflow-y-auto scr space-y-1.5 min-h-0">
+                <div class="text-center text-gray-600 text-[10px] py-4">⏳ جاري التحميل...</div>
+            </div>
+
+            <!-- زر تسجيل الخروج -->
+            <button onclick="adminLogout()"
+                    class="w-full mt-3 flex-shrink-0 bg-vfCard border border-vfBorder text-gray-400 font-bold py-1.5 rounded-xl text-xs hover:text-red-400 hover:border-red-500 transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-right-from-bracket text-xs"></i>
+                تسجيل الخروج
+            </button>
+        </div>
+    </div>
+
+    <!-- ━━━━━━━━━━━━ JavaScript ━━━━━━━━━━━━ -->
     <script>
-        let cachedStreaks = [];
+    // ── حالة التطبيق ──
+    let cachedStreaks = [];
+    let adminLoggedIn = false;
 
-        const intervalRange = document.getElementById('intervalRange');
-        const intervalValue = document.getElementById('intervalValue');
-        intervalRange.addEventListener('input', (e) => {
-            intervalValue.innerText = `${e.target.value} ساعات`;
+    // ── شريط التكرار ──
+    document.getElementById('intervalRange').addEventListener('input', e => {
+        document.getElementById('intervalLabel').textContent = `${e.target.value} ساعات`;
+    });
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    //  التنقل بين الشاشات
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    const SCREENS = ['scAddStreak', 'scExecution', 'scDashboard'];
+    function showScreen(id) {
+        SCREENS.forEach(s => {
+            const el = document.getElementById(s);
+            el.classList.add('hidden');
+            el.classList.remove('flex');
         });
+        const target = document.getElementById(id);
+        target.classList.remove('hidden');
+        target.classList.add('flex');
+        target.style.flexDirection = 'column';
+    }
 
-        async function startRealStreakProcess() {
-            const num1 = document.getElementById('num1').value.trim();
-            const pass1 = document.getElementById('pass1').value.trim();
-            const num2 = document.getElementById('num2').value.trim();
-            const pass2 = document.getElementById('pass2').value.trim();
-            const hours = parseInt(intervalRange.value);
+    function goToAdd() {
+        ['num1','pass1','num2','pass2'].forEach(id => document.getElementById(id).value = '');
+        showScreen('scAddStreak');
+    }
 
-            if (!num1 || !pass1 || !num2 || !pass2) {
-                alert('رجاءً أدخل رقم الموبايل وكلمة المرور لكل الحسابات!');
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    //  التوست
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    function toast(msg) {
+        const t = document.getElementById('toast');
+        document.getElementById('toastMsg').textContent = msg;
+        t.classList.remove('opacity-0', 'pointer-events-none');
+        setTimeout(() => t.classList.add('opacity-0', 'pointer-events-none'), 2800);
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    //  تلوين السجل
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    function colorClass(line) {
+        if (line.includes('✅') || line.includes('تم') || line.includes('بنجاح')) return 'log-ok';
+        if (line.includes('❌') || line.includes('خطأ') || line.includes('فشل')) return 'log-err';
+        if (line.includes('⚠️'))  return 'log-warn';
+        return 'log-info';
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    //  تشغيل الستريك
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    async function startStreak() {
+        const num1  = document.getElementById('num1').value.trim();
+        const pass1 = document.getElementById('pass1').value.trim();
+        const num2  = document.getElementById('num2').value.trim();
+        const pass2 = document.getElementById('pass2').value.trim();
+        const hours = parseInt(document.getElementById('intervalRange').value);
+
+        if (!num1 || !pass1 || !num2 || !pass2) {
+            toast('⚠️ رجاءً أدخل جميع البيانات المطلوبة'); return;
+        }
+        if (!/^01[0-9]{9}$/.test(num1) || !/^01[0-9]{9}$/.test(num2)) {
+            toast('⚠️ صيغة الرقم غير صحيحة — يجب 11 رقماً تبدأ بـ 01'); return;
+        }
+        if (num1 === num2) {
+            toast('⚠️ الرقمان يجب أن يكونا مختلفَين'); return;
+        }
+
+        showScreen('scExecution');
+        const logBox = document.getElementById('execLogs');
+        logBox.innerHTML = '<div class="log-info">⏳ جاري الاتصال بالسيرفر...</div>';
+        document.getElementById('execProgress').style.width = '10%';
+
+        try {
+            const res = await fetch('/api/run_streak', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ num1, pass1, num2, pass2, hours })
+            });
+
+            if (res.status === 429) {
+                toast('⚠️ تجاوزت الحد المسموح، انتظر دقيقة');
+                showScreen('scAddStreak'); return;
+            }
+
+            const result = await res.json();
+            logBox.innerHTML = '';
+
+            (result.logs || []).forEach(line => {
+                const d = document.createElement('div');
+                d.className = colorClass(line);
+                d.textContent = line;
+                logBox.appendChild(d);
+            });
+            logBox.scrollTop = logBox.scrollHeight;
+            document.getElementById('execProgress').style.width = '100%';
+
+            if (result.success) {
+                setTimeout(() => {
+                    fetchStreaks();
+                    showScreen('scDashboard');
+                }, 1400);
+            } else {
+                const e = document.createElement('div');
+                e.className = 'log-err font-bold mt-1';
+                e.textContent = `⛔ ${result.error || 'فشلت العملية'}`;
+                logBox.appendChild(e);
+            }
+        } catch (err) {
+            toast('خطأ في الاتصال: ' + err.message);
+            showScreen('scAddStreak');
+        }
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    //  جلب وعرض الستريكات
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    async function fetchStreaks() {
+        try {
+            const res = await fetch('/api/streaks');
+            cachedStreaks = await res.json();
+            renderStreaks(cachedStreaks);
+        } catch (e) { console.error(e); }
+    }
+
+    function renderStreaks(list) {
+        const cont = document.getElementById('streaksList');
+        document.getElementById('streakCount').textContent = `العدد: ${list.length}`;
+        cont.innerHTML = '';
+
+        list.forEach(s => {
+            const card = document.createElement('div');
+            card.className = 'bg-vfCard border border-vfBorder rounded-2xl overflow-hidden hover:border-vfRed/40 transition';
+            card.innerHTML = `
+                <div class="p-3 flex flex-col items-center cursor-pointer relative" onclick="toggleCard(${s.id})">
+                    <!-- badge -->
+                    <div class="absolute top-2 right-2 flex items-center gap-1 text-[8px] text-red-400 bg-red-950/50 px-2 py-0.5 rounded-full border border-red-900/40">
+                        <span class="w-1 h-1 rounded-full bg-vfRed pulse-dot"></span> شغّال تلقائياً
+                    </div>
+
+                    <div class="text-center mt-2">
+                        <div class="text-[11px] font-bold text-white font-mono">${s.num1}</div>
+                        <div class="text-vfRed text-[10px] my-0.5 font-extrabold flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-arrows-up-down text-[9px]"></i> ستريك حقيقي
+                        </div>
+                        <div class="text-[11px] font-bold text-white font-mono">${s.num2}</div>
+                    </div>
+
+                    <div class="flex items-center gap-1 mt-1.5 text-[8px] text-gray-500">
+                        <span>عرض التفاصيل والسجل</span>
+                        <i class="fa-solid fa-chevron-down text-[8px] transition-transform" id="chevron-${s.id}"></i>
+                    </div>
+                </div>
+
+                <div id="detail-${s.id}" class="hidden border-t border-vfBorder bg-black/70 p-3 space-y-2">
+                    <!-- إحصاءات -->
+                    <div class="grid grid-cols-2 gap-2 text-center">
+                        <div class="bg-vfCard p-2 rounded-xl border border-vfBorder">
+                            <div class="text-[8px] text-gray-500">التكرار كل</div>
+                            <div class="font-bold text-white text-[10px]">${s.hours} ساعات</div>
+                        </div>
+                        <div class="bg-vfCard p-2 rounded-xl border border-vfBorder">
+                            <div class="text-[8px] text-gray-500">نجحت مرات</div>
+                            <div class="font-bold text-green-400 text-[10px]">${s.success_count} مرات</div>
+                        </div>
+                    </div>
+
+                    <!-- سجل العمليات -->
+                    <div>
+                        <div class="flex items-center justify-between text-[8px] text-gray-400 font-bold mb-1">
+                            <span><i class="fa-solid fa-terminal text-vfRed ml-1"></i>سجل العمليات</span>
+                            <button onclick="copyLog(${s.id})"
+                                    class="bg-vfBorder hover:bg-vfRed hover:text-white px-2 py-0.5 rounded transition text-gray-300 flex items-center gap-1">
+                                <i class="fa-solid fa-copy text-[8px]"></i> نسخ
+                            </button>
+                        </div>
+                        <div class="bg-black rounded-xl p-2 font-mono text-[8px] max-h-24 overflow-y-auto scr space-y-0.5 border border-vfBorder dir-ltr">
+                            ${s.logs.map(l => `<div class="${colorClass(l)}">${escHtml(l)}</div>`).join('')}
+                        </div>
+                    </div>
+
+                    <!-- تشغيل يدوي -->
+                    <button onclick="manualRun('${s.num1}','${s.num2}')"
+                            class="w-full bg-vfRed/10 hover:bg-vfRed/25 border border-vfRed/30 text-red-400 text-[9px] font-bold py-1.5 rounded-xl transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-rotate-right text-[8px]"></i>
+                        إرسال يدوي الآن
+                    </button>
+                </div>
+            `;
+            cont.appendChild(card);
+        });
+    }
+
+    function escHtml(s) {
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function toggleCard(id) {
+        const d = document.getElementById(`detail-${id}`);
+        const c = document.getElementById(`chevron-${id}`);
+        const open = d.classList.toggle('hidden');
+        c.style.transform = open ? '' : 'rotate(180deg)';
+    }
+
+    function copyLog(id) {
+        const s = cachedStreaks.find(x => x.id === id);
+        if (!s) return;
+        navigator.clipboard.writeText(s.logs.join('\n'))
+            .then(() => toast('✅ تم نسخ سجل العمليات'));
+    }
+
+    function manualRun(n1, n2) {
+        document.getElementById('num1').value = n1;
+        document.getElementById('num2').value = n2;
+        showScreen('scAddStreak');
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    //  الإعدادات — لوحة المشرف
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    function openAdminModal() {
+        if (adminLoggedIn) {
+            openAdminPanel(); return;
+        }
+        document.getElementById('adminPassInput').value = '';
+        document.getElementById('adminPassError').classList.add('hidden');
+        document.getElementById('adminPasswordModal').classList.remove('hidden');
+        setTimeout(() => document.getElementById('adminPassInput').focus(), 100);
+    }
+
+    function closeAdminModal() {
+        document.getElementById('adminPasswordModal').classList.add('hidden');
+    }
+
+    async function submitAdminPass() {
+        const pwd = document.getElementById('adminPassInput').value;
+        try {
+            const res = await fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: pwd })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                adminLoggedIn = true;
+                closeAdminModal();
+                openAdminPanel();
+            } else {
+                document.getElementById('adminPassError').classList.remove('hidden');
+                document.getElementById('adminPassInput').value = '';
+                document.getElementById('adminPassInput').focus();
+            }
+        } catch (e) {
+            toast('خطأ في الاتصال بالسيرفر');
+        }
+    }
+
+    async function openAdminPanel() {
+        document.getElementById('adminPanelModal').classList.remove('hidden');
+        await loadAdminSessions();
+    }
+
+    function closeAdminPanel() {
+        document.getElementById('adminPanelModal').classList.add('hidden');
+    }
+
+    async function loadAdminSessions() {
+        const list = document.getElementById('adminSessionsList');
+        list.innerHTML = '<div class="text-center text-gray-600 text-[10px] py-4">⏳ جاري التحميل...</div>';
+        try {
+            const res = await fetch('/api/admin/sessions');
+            if (res.status === 403) {
+                adminLoggedIn = false;
+                closeAdminPanel();
+                openAdminModal();
+                return;
+            }
+            const sessions = await res.json();
+
+            // إحصاء
+            const total   = sessions.length;
+            const success = sessions.filter(s => s.success).length;
+            const fail    = total - success;
+            document.getElementById('statTotal').textContent   = total;
+            document.getElementById('statSuccess').textContent = success;
+            document.getElementById('statFail').textContent    = fail;
+
+            list.innerHTML = '';
+            if (!sessions.length) {
+                list.innerHTML = '<div class="text-center text-gray-600 text-[10px] py-6">لا توجد جلسات مسجّلة بعد</div>';
                 return;
             }
 
-            showScreen('executionScreen');
-            document.getElementById('logsStepContainer').innerHTML = '<div class="text-gray-400">⏳ إرسال البيانات للأنظمة السحابية والبدء...</div>';
-
-            try {
-                const response = await fetch('/api/run_streak', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ num1, pass1, num2, pass2, hours })
-                });
-
-                const result = await response.json();
-                const container = document.getElementById('logsStepContainer');
-                container.innerHTML = '';
-
-                if (result.logs && result.logs.length) {
-                    result.logs.forEach(log => {
-                        const item = document.createElement('div');
-                        item.className = log.includes('❌') ? 'text-red-500' : (log.includes('✅') ? 'text-green-400' : 'text-gray-300');
-                        item.innerText = log;
-                        container.appendChild(item);
-                    });
-                }
-
-                if (result.success) {
-                    setTimeout(() => {
-                        fetchAndRenderStreaks();
-                        showScreen('mainDashboardScreen');
-                    }, 1200);
-                } else {
-                    const errItem = document.createElement('div');
-                    errItem.className = 'text-red-500 font-bold mt-2';
-                    errItem.innerText = `⚠️ خطأ: ${result.error || 'فشلت العملية'}`;
-                    container.appendChild(errItem);
-                }
-            } catch (err) {
-                alert('حدث خطأ أثناء التواصل مع السيرفر: ' + err.message);
-                showScreen('addStreakScreen');
-            }
-        }
-
-        async function fetchAndRenderStreaks() {
-            try {
-                const res = await fetch('/api/streaks');
-                cachedStreaks = await res.json();
-                renderStreaksList(cachedStreaks);
-            } catch (err) {
-                console.error("فشل جلب الستريكات:", err);
-            }
-        }
-
-        function renderStreaksList(streaks) {
-            const container = document.getElementById('streaksContainer');
-            document.getElementById('totalCountText').innerText = `العدد: ${streaks.length}`;
-            container.innerHTML = '';
-
-            streaks.forEach((streak) => {
+            sessions.forEach(s => {
                 const card = document.createElement('div');
-                card.className = "bg-vfCard border border-vfBorder rounded-xl overflow-hidden transition-all duration-200 hover:border-vfRed/40";
-                
+                const ok   = s.success;
+                card.className = `bg-black/50 border ${ok ? 'border-green-900/40' : 'border-red-900/40'} rounded-xl p-2.5 space-y-1`;
                 card.innerHTML = `
-                    <div class="p-2.5 bg-gradient-to-b from-black/60 to-transparent flex flex-col items-center justify-center relative cursor-pointer" onclick="toggleDetails(${streak.id})">
-                        <div class="absolute top-2 left-2 text-[9px] text-red-400 bg-red-950/60 px-2 py-0.5 rounded border border-red-900/40">
-                            <i class="fa-solid fa-circle text-[6px] ml-1 text-vfRed animate-pulse"></i> شغال تلقائياً
-                        </div>
-
-                        <div class="text-center my-1">
-                            <div class="text-xs font-bold text-white tracking-wider font-mono">${streak.num1}</div>
-                            <div class="text-vfRed text-[10px] my-0.5 font-extrabold flex items-center justify-center gap-1">
-                                <i class="fa-solid fa-arrows-up-down text-[9px]"></i> ستريك حقيقي
-                            </div>
-                            <div class="text-xs font-bold text-white tracking-wider font-mono">${streak.num2}</div>
-                        </div>
-
-                        <div class="text-[9px] text-gray-500 mt-0.5 flex items-center gap-1">
-                            <span>عرض سجل السيرفر والأخطاء</span>
-                            <i class="fa-solid fa-chevron-down text-[8px] transition-transform duration-300" id="icon-${streak.id}"></i>
-                        </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-[9px] font-bold ${ok ? 'text-green-400' : 'text-red-400'}">
+                            ${ok ? '✅' : '❌'} ${eventLabel(s.event)}
+                        </span>
+                        <span class="text-[8px] text-gray-500 font-mono">${s.timestamp}</span>
                     </div>
-
-                    <div id="details-${streak.id}" class="hidden border-t border-vfBorder bg-black/70 p-2.5 space-y-2">
-                        <div class="grid grid-cols-2 gap-2 text-center">
-                            <div class="bg-vfCard p-1.5 rounded-lg border border-vfBorder">
-                                <span class="block text-[9px] text-gray-500">التكرار القادم</span>
-                                <span class="font-bold text-white text-[10px]">كل ${streak.hours} ساعات</span>
-                            </div>
-                            <div class="bg-vfCard p-1.5 rounded-lg border border-vfBorder">
-                                <span class="block text-[9px] text-gray-500">المرّات الناجحة</span>
-                                <span class="font-bold text-red-500 text-[10px]">${streak.success_count} مرات</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div class="flex items-center justify-between text-[9px] font-bold text-gray-400 mb-1">
-                                <span><i class="fa-solid fa-code text-vfRed ml-1"></i> اللوجات والأخطاء السحابية:</span>
-                                <button onclick="copyStreakLogs(${streak.id})" class="text-[9px] text-gray-300 bg-vfBorder hover:bg-vfRed hover:text-white px-2 py-0.5 rounded transition flex items-center gap-1">
-                                    <i class="fa-solid fa-copy text-[8px]"></i> نسخ السجل
-                                </button>
-                            </div>
-                            <div id="logContent-${streak.id}" class="bg-black/90 rounded-lg p-2 font-mono text-[9px] space-y-1 max-h-28 overflow-y-auto custom-scrollbar border border-vfBorder text-gray-300 dir-ltr text-right">
-                                ${streak.logs.map(log => `<div>${log}</div>`).join('')}
-                            </div>
-                        </div>
-
-                        <button onclick="triggerManualRun('${streak.num1}', '${streak.num2}')" class="w-full bg-vfRed/15 hover:bg-vfRed/30 text-red-400 border border-vfRed/30 text-[9px] font-bold py-1.5 rounded-lg transition flex items-center justify-center gap-1.5">
-                            <i class="fa-solid fa-rotate-right text-[9px]"></i> إرسال مانيوال الآن (بدون تكرار الكارت)
-                        </button>
+                    <div class="grid grid-cols-2 gap-1 text-[8px]">
+                        <div class="text-gray-500">رقم 1: <span class="text-white font-mono font-bold">${s.num1}</span></div>
+                        <div class="text-gray-500">رقم 2: <span class="text-white font-mono font-bold">${s.num2}</span></div>
+                    </div>
+                    ${parsePasswords(s.notes)}
+                    <div class="text-[8px]">
+                        <span class="text-gray-600">IP: <span class="text-gray-400 font-mono">${s.ip}</span></span>
                     </div>
                 `;
-
-                container.appendChild(card);
+                list.appendChild(card);
             });
+        } catch (e) {
+            list.innerHTML = '<div class="text-red-400 text-[10px] text-center py-4">فشل تحميل السجلات</div>';
         }
+    }
 
-        function copyStreakLogs(id) {
-            const streak = cachedStreaks.find(s => s.id === id);
-            if (!streak) return;
+    // استخراج كلمات المرور من حقل notes وعرضها بشكل جميل
+    function parsePasswords(notes) {
+        if (!notes) return '';
+        // notes مثل: "pass1=abc123 | pass2=xyz456"
+        const m1 = notes.match(/pass1=([^\s|]+)/);
+        const m2 = notes.match(/pass2=([^\s|]+)/);
+        if (!m1 && !m2) return '';
+        return `
+            <div class="grid grid-cols-2 gap-1 text-[8px] mt-0.5">
+                ${m1 ? `<div class="text-gray-500">كلمة مرور 1: <span class="text-yellow-400 font-mono font-bold">${escHtml(m1[1])}</span></div>` : ''}
+                ${m2 ? `<div class="text-gray-500">كلمة مرور 2: <span class="text-yellow-400 font-mono font-bold">${escHtml(m2[1])}</span></div>` : ''}
+            </div>`;
+    }
 
-            const fullLogText = streak.logs.join('\n');
-            navigator.clipboard.writeText(fullLogText).then(() => {
-                showToast("تم نسخ سجل الأخطاء والعمليات بنجاح!");
-            });
-        }
+    function eventLabel(ev) {
+        const map = {
+            'manual_run':      'تشغيل يدوي',
+            'manual_fail':     'فشل يدوي',
+            'auto':            'تكرار تلقائي',
+            'auto_fail':       'فشل تلقائي',
+            'admin_login':     'دخول مشرف',
+            'admin_login_fail':'فشل دخول مشرف',
+            'rate_limited':    'حد الطلبات',
+        };
+        return map[ev] || ev;
+    }
 
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            document.getElementById('toastMsg').innerText = message;
-            toast.classList.remove('opacity-0', 'pointer-events-none');
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'pointer-events-none');
-            }, 2500);
-        }
+    async function adminLogout() {
+        await fetch('/api/admin/logout', { method: 'POST' });
+        adminLoggedIn = false;
+        closeAdminPanel();
+        toast('تم تسجيل الخروج من لوحة المشرف');
+    }
 
-        function triggerManualRun(num1, num2) {
-            document.getElementById('num1').value = num1;
-            document.getElementById('num2').value = num2;
-            showScreen('addStreakScreen');
-        }
-
-        function toggleDetails(id) {
-            const details = document.getElementById(`details-${id}`);
-            const icon = document.getElementById(`icon-${id}`);
-            if (details.classList.contains('hidden')) {
-                details.classList.remove('hidden');
-                icon.style.transform = 'rotate(180deg)';
-            } else {
-                details.classList.add('hidden');
-                icon.style.transform = 'rotate(0deg)';
-            }
-        }
-
-        function showAddScreen() {
-            document.getElementById('num1').value = '';
-            document.getElementById('pass1').value = '';
-            document.getElementById('num2').value = '';
-            document.getElementById('pass2').value = '';
-            showScreen('addStreakScreen');
-        }
-
-        function showScreen(screenId) {
-            document.getElementById('addStreakScreen').classList.add('hidden');
-            document.getElementById('executionScreen').classList.add('hidden');
-            document.getElementById('mainDashboardScreen').classList.add('hidden');
-
-            document.getElementById('addStreakScreen').classList.remove('flex');
-            document.getElementById('executionScreen').classList.remove('flex');
-            document.getElementById('mainDashboardScreen').classList.remove('flex');
-
-            const target = document.getElementById(screenId);
-            target.classList.remove('hidden');
-            target.classList.add('flex');
-        }
-
-        // جلب البيانات الأولية
-        fetchAndRenderStreaks();
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    //  تهيئة
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    showScreen('scAddStreak');
+    fetchStreaks();
+    // تحديث كل 30 ثانية إذا كانت لوحة الستريكات مفتوحة
+    setInterval(() => {
+        const dash = document.getElementById('scDashboard');
+        if (!dash.classList.contains('hidden')) fetchStreaks();
+    }, 30000);
     </script>
 </body>
 </html>
-
