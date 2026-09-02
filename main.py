@@ -68,6 +68,7 @@ _rate_lock = threading.Lock()
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 active_streaks: dict = {}
 streak_lock = threading.Lock()
+STREAKS_FILE = "active_streaks.json"   # يحفظ الستريكات على الديسك بشكل دائم
 
 # سجل الجلسات الكامل (يخزَّن في الذاكرة + ملف JSON)
 sessions_log: list = []
